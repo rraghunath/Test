@@ -22,7 +22,8 @@ set.seed(1)         # initialize random seed for consistency
 
 test.pct <- 0.1    # pct of data to use for test set
 N <- nrow(data)     # total number of records (150)
-for (mm in 1:10)
+  cerr.rates <- data.frame()       # initialize cumulative results object
+for (fold in 1:10)
 {
   test.index <- sample(1:N, replace = FALSE, test.pct * N)       # random sample of records (test set)
   test.data <- data[test.index, ] # get the test data first
@@ -35,8 +36,7 @@ for (mm in 1:10)
 #################################################
 
   err.rates <- data.frame()       # initialize results object
-
-  max.k <- 15
+max.k <- 15
   for (k in 1:max.k)              # perform fit for various values of k
   {
       knn.fit <- knn(train = train.data,          # training set
@@ -45,27 +45,31 @@ for (mm in 1:10)
                       k = k                       # number of NN to poll
                  )
 
-      cat('\n', 'k = ', k, ', test.pct = ', test.pct, '\n', sep='')     # print params
+      cat('\n', 'fold = ', fold, ' k = ', k, ', test.pct = ', test.pct, '\n', sep='')     # print params
       print(table(test.labels, knn.fit))          # print confusion matrix
-
       this.err <- sum(test.labels != knn.fit) / length(test.labels)    # store gzn err
       err.rates <- rbind(err.rates, this.err)     # append err to total results
+      cerr.rates <- rbind(cerr.rates, this.err)     # append err to total results
   }
+
+
 
 #################################################
 # OUTPUT RESULTS
 #################################################
-
+  
+# results <- data.frame(err.ratesmin:err.ratesmin+max.k, err.rates)   # create results summary data frame
   results <- data.frame(1:max.k, err.rates)   # create results summary data frame
   names(results) <- c('k', 'err.rate')        # label columns of results df
 
+#  err.ratesmin <- 1+max.k
 # create title for results plot
-  title <- paste('knn results (test.pct = ', test.pct, ' CVFold = ', mm, ')', sep='')
+  title <- paste('knn results (test.pct = ', test.pct, ' CVFold = ', fold, ')', sep='')
 
 # create results plot
 
-if ( mm>1 ) 
-  results.plot <- results.plot + ggplot(results, aes(x=k, y=err.rate)) + geom_point() + geom_line() 
+if (fold > 1) 
+ results.plot <- results.plot + geom_line(data = results, width = fold) 
 else
   results.plot <- ggplot(results, aes(x=k, y=err.rate)) + geom_point() + geom_line()
 
@@ -74,7 +78,10 @@ else
 # draw results plot (note need for print stmt inside script to draw ggplot)
 print(results.plot)
 }
-# print(results.plot)
+cat('new print out', '\n')
+print(cerr.rates)
+  results <- data.frame(1:N, cerr.rates)   # create results summary data frame
+  results.plot <- ggplot(results, aes(x=k, y=cerr.rate)) + geom_point() + geom_line()
 #################################################
 # NOTES
 #################################################
